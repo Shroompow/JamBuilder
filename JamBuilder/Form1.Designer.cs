@@ -76,7 +76,7 @@
             this.delEnemy = new System.Windows.Forms.Button();
             this.addEnemy = new System.Windows.Forms.Button();
             this.enemyList = new System.Windows.Forms.ListBox();
-            this.glControl = new OpenTK.GLControl();
+            this.glControl = new OpenTK.GLControl(new OpenTK.Graphics.GraphicsMode(),3,3,OpenTK.Graphics.GraphicsContextFlags.Default);
             this.resetCamera = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
