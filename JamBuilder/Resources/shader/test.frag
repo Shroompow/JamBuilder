@@ -3,6 +3,10 @@ out vec4 FragColor;
 
 in vec2 _tex;
 
+uniform sampler2D texSampler;
+uniform float time;
+
 void main(){
-	FragColor = vec4(1.0,0.5,0.1,1.0);
+	
+	FragColor = texture(texSampler, _tex+vec2(0.2*sin(time+_tex.y*6),0));
 }

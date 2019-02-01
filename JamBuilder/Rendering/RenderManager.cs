@@ -29,9 +29,31 @@ namespace JamBuilder.Rendering
 		public int vertCount;
 	}
 
-	struct GLShader
+	abstract class GLShader
 	{
 		public int glID;
+		abstract public void setupAttrib();
+		abstract public void setupUniform();
+	}
+
+	class TestShader : GLShader
+	{
+		private int ulTime;
+		public override void setupAttrib()
+		{
+			GL.BindAttribLocation(glID, 0, "inPos");
+			GL.BindAttribLocation(glID, 1, "inTex");
+		}
+
+		public override void setupUniform()
+		{
+			ulTime = GL.GetUniformLocation(glID, "time");
+		}
+
+		public void setTime(float time)
+		{
+			GL.Uniform1(ulTime, time);
+		}
 	}
 
 	public class RenderManager
@@ -44,11 +66,13 @@ namespace JamBuilder.Rendering
 
 		private List<Gl2DModel> models2d = new List<Gl2DModel>();
 		private List<Gl3DModel> models3d = new List<Gl3DModel>();
-
-		/// <summary>Shorthand for performance</summary>
+		
 		private Gl2DModel centeredQuad;
+		private TestShader testShader;
+		private GlTexture defaultTexture;
 
-		private GLShader testShader;
+		private long startTick;
+
 
 		public RenderManager(GLControl glControl)
 		{
@@ -69,27 +93,14 @@ namespace JamBuilder.Rendering
 				0.5f,	0.5f,       1.0f,	1.0f,
 				0.5f,	-0.5f,		1.0f,	0.0f
 			};
-			centeredQuad = models2d[loadModel2D(centeredQuadData)];
-			testShader = loadShader("shader/test.vert", "shader/test.frag");
+			centeredQuad = loadModel2D(centeredQuadData);
+			testShader = (TestShader)loadShader("shader/test.vert", "shader/test.frag", new TestShader());
+			defaultTexture = loadTextureFile("test.png");
+
+			startTick = System.DateTime.Now.Ticks;
 		}
 
-		~RenderManager()
-		{
-			for(int i = 0; i < textures.Count; i++)
-			{
-				GL.DeleteTexture(textures[i].glID);
-			}
-			for (int i = 0; i < textures.Count; i++)
-			{
-				GL.DeleteVertexArray(models2d[i].glID);
-			}
-			for (int i = 0; i < textures.Count; i++)
-			{
-				GL.DeleteVertexArray(models3d[i].glID);
-			}
-		}
-
-		public int loadTextureFile(string file)
+		private GlTexture loadTextureFile(string file)
 		{
 			Console.WriteLine("Loading Texture \"" + file + "\"");
 			Bitmap bitmap = new Bitmap("Resources/"+file);
@@ -116,10 +127,10 @@ namespace JamBuilder.Rendering
 			textures.Add(gTex);
 			textureDictionary[file] = (uint)(textures.Count - 1);
 
-			return textures.Count-1;
+			return gTex;
 		}
 
-		private GLShader loadShader(string vertFile, string fragFile)
+		private GLShader loadShader(string vertFile, string fragFile, GLShader sh)
 		{
 			Console.WriteLine("Loading Shader v:\"" + vertFile + "\" f:\"" + fragFile + "\"");
 			string vertStr = System.IO.File.ReadAllText("Resources/" + vertFile);
@@ -132,8 +143,7 @@ namespace JamBuilder.Rendering
 			int prog = GL.CreateProgram();
 			GL.AttachShader(prog, vertSh);
 			GL.AttachShader(prog, fragSh);
-			GL.BindAttribLocation(prog, 0, "inPos");
-			GL.BindAttribLocation(prog, 1, "inTex");
+			sh.setupAttrib();
 			GL.LinkProgram(prog);
 			GL.DetachShader(prog, vertSh);
 			GL.DetachShader(prog, fragSh);
@@ -145,10 +155,11 @@ namespace JamBuilder.Rendering
 			Console.WriteLine("FragC " + c);
 			GL.GetProgram(prog, GetProgramParameterName.LinkStatus, out c);
 			Console.WriteLine("ProgC " + c);
+			Console.Write("link program: "+GL.GetProgramInfoLog(prog));
 			GL.DeleteShader(vertSh);
 			GL.DeleteShader(fragSh);
-			GLShader sh;
 			sh.glID = prog;
+			sh.setupUniform();
 			return sh;
 		}
 
@@ -156,7 +167,7 @@ namespace JamBuilder.Rendering
 		/// Loads a 2-dimensional model.
 		/// Length must be a minimum of 12 and a multiple of 4. Format: x, y, texX, texY...
 		/// </summary>
-		public int loadModel2D(float[] vertData)
+		private Gl2DModel loadModel2D(float[] vertData)
 		{
 			Console.WriteLine("Loading 2DModel");
 			if (vertData.Length < 12 || vertData.Length % 4 != 0)
@@ -182,14 +193,14 @@ namespace JamBuilder.Rendering
 
 			models2d.Add(mdl);
 			Console.WriteLine("2D "+GL.GetError());
-			return models2d.Count - 1;
+			return mdl;
 		}
 
 		/// <summary>
 		/// Loads a 2-dimensional model.
 		/// Length must be a minimum of 15 and a multiple of 5. Format: x, y, z, texX, texY...
 		/// </summary>
-		public int loadModel3D(float[] vertData)
+		private Gl3DModel loadModel3D(float[] vertData)
 		{
 			Console.WriteLine("Loading 3DModel");
 			if (vertData.Length < 15 || vertData.Length % 5 != 0)
@@ -212,7 +223,7 @@ namespace JamBuilder.Rendering
 
 			models3d.Add(mdl);
 
-			return models3d.Count-1;
+			return mdl;
 		}
 
 		public void render()
@@ -220,16 +231,16 @@ namespace JamBuilder.Rendering
 			GL.ClearColor(0.6f, 0.6f, 0.6f, 1.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 			GL.UseProgram(testShader.glID);
-			Console.WriteLine("Use" + GL.GetError());
+			testShader.setTime((float)((startTick-System.DateTime.Now.Ticks)*0.0000001));
+			GL.ActiveTexture(TextureUnit.Texture0);
+			GL.BindTexture(TextureTarget.Texture2D, defaultTexture.glID);
 			GL.BindVertexArray(centeredQuad.glID);
 			GL.EnableVertexAttribArray(0);
 			GL.EnableVertexAttribArray(1);
-			Console.WriteLine("Bind" + GL.GetError());
 			GL.DrawArrays(PrimitiveType.Triangles, 0, centeredQuad.vertCount);
 			GL.DisableVertexAttribArray(1);
 			GL.DisableVertexAttribArray(0);
-			Console.WriteLine(GL.GetError());
-			//GL.BindTexture(TextureTarget.Texture2D, )
+			GL.BindTexture(TextureTarget.Texture2D, 0);
 			glControl.SwapBuffers();
 		}
 	}
