@@ -260,7 +260,7 @@ namespace JamBuilder.Rendering
 			Console.WriteLine("Loading 3DModel");
 			if (vertData.Length < 15 || vertData.Length % 5 != 0)
 			{
-				Console.WriteLine("Warning: 2DModel length is invalid (" + vertData.Length + ")");
+				Console.WriteLine("Warning: 3DModel length is invalid (" + vertData.Length + ")");
 			}
 
 			int vao = GL.GenVertexArray();
