@@ -56,6 +56,57 @@ namespace JamBuilder.Rendering
 		}
 	}
 
+	class BillboardShader : GLShader
+	{
+		private int ulTrans, ulScale, ulProj, ulColorTint, ulColorOffset, ulView;
+		public override void setupAttrib()
+		{
+			GL.BindAttribLocation(glID, 0, "inPos");
+			GL.BindAttribLocation(glID, 1, "inTex");
+		}
+
+		public override void setupUniform()
+		{
+			
+			ulTrans = GL.GetUniformLocation(glID, "trans");
+			ulScale = GL.GetUniformLocation(glID, "scale");
+			ulProj = GL.GetUniformLocation(glID, "projection");
+			ulView = GL.GetUniformLocation(glID, "view");
+			ulColorTint = GL.GetUniformLocation(glID, "colorTint");
+			ulColorOffset = GL.GetUniformLocation(glID, "colorOffset");
+		}
+
+		public void setTranslate(Vector3 t)
+		{
+			GL.Uniform3(ulTrans, t);
+		}
+
+		public void setScale(Vector3 s)
+		{
+			GL.Uniform3(ulScale, s);
+		}
+
+		public void setProjection(Matrix4 p)
+		{
+			GL.UniformMatrix4(ulProj, false, ref p);
+		}
+
+		public void setView(Matrix4 p)
+		{
+			GL.UniformMatrix4(ulView, false, ref p);
+		}
+
+		public void setColorTint(Vector4 c)
+		{
+			GL.Uniform4(ulColorTint, c);
+		}
+
+		public void setColorOffset(Vector3 c)
+		{
+			GL.Uniform3(ulColorOffset, c);
+		}
+	}
+
 	public class RenderManager
 	{
 		private GLControl glControl;
@@ -68,7 +119,10 @@ namespace JamBuilder.Rendering
 		private List<Gl3DModel> models3d = new List<Gl3DModel>();
 		
 		private Gl2DModel centeredQuad;
+
 		private TestShader testShader;
+		private BillboardShader billboardShader;
+
 		private GlTexture defaultTexture;
 
 		private long startTick;
@@ -95,6 +149,7 @@ namespace JamBuilder.Rendering
 			};
 			centeredQuad = loadModel2D(centeredQuadData);
 			testShader = (TestShader)loadShader("shader/test.vert", "shader/test.frag", new TestShader());
+			billboardShader = (BillboardShader)loadShader("shader/billboard.vert", "shader/billboard.frag", new BillboardShader());
 			defaultTexture = loadTextureFile("test.png");
 
 			startTick = System.DateTime.Now.Ticks;
